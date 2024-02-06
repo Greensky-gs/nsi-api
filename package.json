@@ -16,5 +16,10 @@
     "tsc": "^2.0.4",
     "tslib": "^2.6.2",
     "typescript": "^5.3.3"
+  },
+  "scripts": {
+    "build": "yarn tsc -b",
+    "start": "node dist/main.js",
+    "launch": "yarn install && yarn build && yarn start"
   }
 }
