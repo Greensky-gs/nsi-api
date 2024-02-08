@@ -42,7 +42,7 @@ app.get('/players', async (req, res) => {
                                 name: player.data.name
                             });
                     });
-                if (player.data.clan.tag) {
+                if (player.data.clan?.tag) {
                     client.clan(player.data.clan.tag).then((clan) => {
                         if (!clan) return;
 
