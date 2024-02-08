@@ -5,12 +5,14 @@ import players from './database/models/players';
 import { Op, col, fn, literal, where } from 'sequelize';
 import { sequelise } from './database/sequelize';
 import { Tables, databasePlayer } from './types/database';
+import cors from 'cors';
 require('dotenv').config();
 
 const app = express();
 const client = new Client();
 
 app.use(express.json());
+app.use(cors());
 
 app.get('/players', async (req, res) => {
     const params = new URLSearchParams(req.url.split('?')[1] ?? '');
@@ -43,26 +45,34 @@ app.get('/players', async (req, res) => {
                             });
                     });
                 if (player.data.clan?.tag) {
-                    client.clan(player.data.clan.tag).then((clan) => {
-                        if (!clan) return;
+                    client
+                        .clan(player.data.clan.tag)
+                        .then((clan) => {
+                            if (!clan) return;
 
-                        const memberList = clan.data.memberList.map(x => x.tag)
-                        
-                        players.findAll({
-                            where: {
-                                tag: {
-                                    [Op.in]: memberList
-                                }
-                            }
-                        }).then((playerList) => {
-                            if (!playerList) return;
+                            const memberList = clan.data.memberList.map((x) => x.tag);
 
-                            const ids = playerList.map(x => x.dataValues.tag)
-                            const notIn = clan.data.memberList.filter(x => !ids.includes(x.tag))
+                            players
+                                .findAll({
+                                    where: {
+                                        tag: {
+                                            [Op.in]: memberList
+                                        }
+                                    }
+                                })
+                                .then((playerList) => {
+                                    if (!playerList) return;
 
-                            players.bulkCreate(notIn.map(x => ({ tag: x.tag, name: x.name }))).catch(() => {});
-                        }).catch(() => {})
-                    }).catch(() => {})
+                                    const ids = playerList.map((x) => x.dataValues.tag);
+                                    const notIn = clan.data.memberList.filter((x) => !ids.includes(x.tag));
+
+                                    players
+                                        .bulkCreate(notIn.map((x) => ({ tag: x.tag, name: x.name })))
+                                        .catch(() => {});
+                                })
+                                .catch(() => {});
+                        })
+                        .catch(() => {});
                 }
 
                 return res.send({
