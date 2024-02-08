@@ -116,9 +116,8 @@ app.get('*', (req, res) => {
     });
 });
 
-const port = 8082;
-app.listen(port, () => {
-    console.log(`[*] App listening on port ${port}`);
+app.listen(process.env.port, () => {
+    console.log(`[*] App listening on port ${process.env.port}`);
 
     // Periodically indexing database
     setInterval(() => {

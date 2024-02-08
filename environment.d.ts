@@ -5,6 +5,7 @@ declare global {
             dbp: string;
             dbh: string;
             dbu: string;
+            port: string;
         }
     }
 }
