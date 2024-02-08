@@ -18,7 +18,7 @@ app.get('/players', async (req, res) => {
     const tag = params.get('playerTag');
     const name = params.get('playerName');
     if (tag) {
-        const search = tag.startsWith('#') ? tag : `#${tag}`;
+        const search = (tag.startsWith('#') ? tag : `#${tag}`)?.toUpperCase();
 
         client
             .player(search)
@@ -42,6 +42,28 @@ app.get('/players', async (req, res) => {
                                 name: player.data.name
                             });
                     });
+                if (player.data.clan.tag) {
+                    client.clan(player.data.clan.tag).then((clan) => {
+                        if (!clan) return;
+
+                        const memberList = clan.data.memberList.map(x => x.tag)
+                        
+                        players.findAll({
+                            where: {
+                                tag: {
+                                    [Op.in]: memberList
+                                }
+                            }
+                        }).then((playerList) => {
+                            if (!playerList) return;
+
+                            const ids = playerList.map(x => x.dataValues.tag)
+                            const notIn = clan.data.memberList.filter(x => !ids.includes(x.tag))
+
+                            players.bulkCreate(notIn.map(x => ({ tag: x.tag, name: x.name }))).catch(() => {});
+                        }).catch(() => {})
+                    }).catch(() => {})
+                }
 
                 return res.send({
                     code: 200,
@@ -49,7 +71,8 @@ app.get('/players', async (req, res) => {
                     player: player.data
                 });
             })
-            .catch(() => {
+            .catch((error) => {
+                console.log(error);
                 return res.send({
                     code: 400,
                     ok: false,
