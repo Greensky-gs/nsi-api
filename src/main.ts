@@ -16,73 +16,71 @@ app.use(cors());
 
 const handleSearchTag = (url: string, res?: Response) => {
     client
-            .player(url)
-            .then((player) => {
-                if (!player) return;
+        .player(url)
+        .then((player) => {
+            if (!player) return;
 
-                players
-                    .findOrCreate({
-                        where: {
-                            tag: player.data.tag
-                        },
-                        defaults: {
+            players
+                .findOrCreate({
+                    where: {
+                        tag: player.data.tag
+                    },
+                    defaults: {
+                        tag: player.data.tag,
+                        name: player.data.name
+                    }
+                })
+                .then(([dbres, created]) => {
+                    if (!created)
+                        dbres.update({
                             tag: player.data.tag,
                             name: player.data.name
-                        }
-                    })
-                    .then(([dbres, created]) => {
-                        if (!created)
-                            dbres.update({
-                                tag: player.data.tag,
-                                name: player.data.name
-                            });
-                    });
-                if (player.data.clan?.tag) {
-                    client
-                        .clan(player.data.clan.tag)
-                        .then((clan) => {
-                            if (!clan) return;
+                        });
+                });
+            if (player.data.clan?.tag) {
+                client
+                    .clan(player.data.clan.tag)
+                    .then((clan) => {
+                        if (!clan) return;
 
-                            const memberList = clan.data.memberList.map((x) => x.tag);
+                        const memberList = clan.data.memberList.map((x) => x.tag);
 
-                            players
-                                .findAll({
-                                    where: {
-                                        tag: {
-                                            [Op.in]: memberList
-                                        }
+                        players
+                            .findAll({
+                                where: {
+                                    tag: {
+                                        [Op.in]: memberList
                                     }
-                                })
-                                .then((playerList) => {
-                                    if (!playerList) return;
+                                }
+                            })
+                            .then((playerList) => {
+                                if (!playerList) return;
 
-                                    const ids = playerList.map((x) => x.dataValues.tag);
-                                    const notIn = clan.data.memberList.filter((x) => !ids.includes(x.tag));
+                                const ids = playerList.map((x) => x.dataValues.tag);
+                                const notIn = clan.data.memberList.filter((x) => !ids.includes(x.tag));
 
-                                    players
-                                        .bulkCreate(notIn.map((x) => ({ tag: x.tag, name: x.name })))
-                                        .catch(() => {});
-                                })
-                                .catch(() => {});
-                        })
-                        .catch(() => {});
-                }
+                                players.bulkCreate(notIn.map((x) => ({ tag: x.tag, name: x.name }))).catch(() => {});
+                            })
+                            .catch(() => {});
+                    })
+                    .catch(() => {});
+            }
 
-                return res?.send({
-                    code: 200,
-                    message: 'Valid data',
-                    player: player.data
-                });
-            })
-            .catch((error) => {
-                console.log(error);
-                return res?.send({
-                    code: 400,
-                    ok: false,
-                    message: 'Unexisting player'
-                });
+            return res?.send({
+                code: 200,
+                message: 'Valid data',
+                player: player.data
             });
-}
+        })
+        .catch((error) => {
+            console.log(error);
+            return res?.send({
+                code: 400,
+                ok: false,
+                message: 'Unexisting player'
+            });
+        });
+};
 
 app.get('/players', async (req, res) => {
     const params = new URLSearchParams(req.url.split('?')[1] ?? '');
@@ -92,7 +90,7 @@ app.get('/players', async (req, res) => {
     if (tag) {
         const search = (tag.startsWith('#') ? tag : `#${tag}`)?.toUpperCase();
 
-        handleSearchTag(search, res)
+        handleSearchTag(search, res);
         return;
     } else {
         const search = name.toLowerCase();
@@ -131,17 +129,17 @@ app.get('*', (req, res) => {
 });
 
 const randomRequest = () => {
-    const letters = "abcdefghijklmnopqrstuvwxyz0123456789".toUpperCase()
-    const randomChar = () => letters[Math.floor(Math.random() * letters.length)]
+    const letters = 'abcdefghijklmnopqrstuvwxyz0123456789'.toUpperCase();
+    const randomChar = () => letters[Math.floor(Math.random() * letters.length)];
 
-    const tag = `#${new Array(9).map(() => randomChar())}`
+    const tag = `#${new Array(9).fill(null).map(() => randomChar()).join('')}`;
 
-    handleSearchTag(tag) 
+    handleSearchTag(tag);
 
     setTimeout(() => {
-        randomRequest()
-    }, 20000)
-}
+        randomRequest();
+    }, 20000);
+};
 
 app.listen(process.env.port, () => {
     console.log(`[*] App listening on port ${process.env.port}`);
@@ -151,5 +149,5 @@ app.listen(process.env.port, () => {
         indexDatabase(client);
     }, 10000);
 
-    randomRequest()
+    randomRequest();
 });
