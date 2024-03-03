@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Response } from 'express';
 import Client from 'clash-royale-api';
 import { indexDatabase } from './scripts/indexdatabase';
 import players from './database/models/players';
@@ -14,16 +14,9 @@ const client = new Client();
 app.use(express.json());
 app.use(cors());
 
-app.get('/players', async (req, res) => {
-    const params = new URLSearchParams(req.url.split('?')[1] ?? '');
-
-    const tag = params.get('playerTag');
-    const name = params.get('playerName');
-    if (tag) {
-        const search = (tag.startsWith('#') ? tag : `#${tag}`)?.toUpperCase();
-
-        client
-            .player(search)
+const handleSearchTag = (url: string, res?: Response) => {
+    client
+            .player(url)
             .then((player) => {
                 if (!player) return;
 
@@ -75,7 +68,7 @@ app.get('/players', async (req, res) => {
                         .catch(() => {});
                 }
 
-                return res.send({
+                return res?.send({
                     code: 200,
                     message: 'Valid data',
                     player: player.data
@@ -83,12 +76,23 @@ app.get('/players', async (req, res) => {
             })
             .catch((error) => {
                 console.log(error);
-                return res.send({
+                return res?.send({
                     code: 400,
                     ok: false,
                     message: 'Unexisting player'
                 });
             });
+}
+
+app.get('/players', async (req, res) => {
+    const params = new URLSearchParams(req.url.split('?')[1] ?? '');
+
+    const tag = params.get('playerTag');
+    const name = params.get('playerName');
+    if (tag) {
+        const search = (tag.startsWith('#') ? tag : `#${tag}`)?.toUpperCase();
+
+        handleSearchTag(search, res)
         return;
     } else {
         const search = name.toLowerCase();
@@ -126,6 +130,19 @@ app.get('*', (req, res) => {
     });
 });
 
+const randomRequest = () => {
+    const letters = "abcdefghijklmnopqrstuvwxyz0123456789".toUpperCase()
+    const randomChar = () => letters[Math.floor(Math.random() * letters.length)]
+
+    const tag = `#${new Array(9).map(() => randomChar())}`
+
+    handleSearchTag(tag) 
+
+    setTimeout(() => {
+        randomRequest()
+    }, 20000)
+}
+
 app.listen(process.env.port, () => {
     console.log(`[*] App listening on port ${process.env.port}`);
 
@@ -133,4 +150,6 @@ app.listen(process.env.port, () => {
     setInterval(() => {
         indexDatabase(client);
     }, 10000);
+
+    randomRequest()
 });
